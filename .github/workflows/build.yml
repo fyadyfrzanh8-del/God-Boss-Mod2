@@ -1,0 +1,53 @@
+
+name: Build God Boss Mod
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**.zip'
+      - '.github/workflows/build.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Extract source
+        run: |
+          mkdir source
+          unzip -q GodBoss-Forge-1.20.1-source.zip -d source
+
+      - name: Find project
+        id: project
+        run: |
+          FILE=$(find source -name build.gradle -print -quit)
+          if [ -z "$FILE" ]; then
+            echo "build.gradle not found"
+            exit 1
+          fi
+          echo "dir=$(dirname "$FILE")" >> $GITHUB_OUTPUT
+
+      - name: Build mod
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.1.1'
+
+      - name: Run Gradle
+        run: gradle build
+        working-directory: ${{ steps.project.outputs.dir }}
+
+      - name: Upload mod
+        uses: actions/upload-artifact@v4
+        with:
+          name: God-Boss-Mod
+          path: ${{ steps.project.outputs.dir }}/build/libs/*.jar
